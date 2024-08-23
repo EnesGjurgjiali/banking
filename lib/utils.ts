@@ -196,18 +196,32 @@ export const getTransactionStatus = (date: Date) => {
 };
 
 
-export const authFormSchema = (type: string) => z.object({
-  //sign up
-  firstName: type === 'sign-in' ? z.string().optional() : z.string().min(3),
-  lastName: type === 'sign-in' ? z.string().optional() : z.string().min(3),
-  address1: type === 'sign-in' ? z.string().optional() : z.string().max(50),
-  city: type === 'sign-in' ? z.string().optional() : z.string().max(50),
-  state: type === 'sign-in' ? z.string().optional() : z.string().min(2).max(2),
-  postalCode: type === 'sign-in' ? z.string().optional() : z.string().min(3).max(6),
-  dateOfBirth: type === 'sign-in' ? z.string().optional() :  z.string().min(3),
-  ssn: type === 'sign-in' ? z.string().optional() : z.string().min(3),
+// List of valid U.S. state abbreviations
+const usStates = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL",
+  "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT",
+  "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI",
+  "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+];
 
-  //both
-  email: z.string().email(),
-  password: z.string().min(8),
-})
+export const authFormSchema = (type: string) => z.object({
+  // sign up
+  firstName: type === 'sign-in' ? z.string().optional() : z.string().min(3, "First name must have at least 3 characters"),
+  lastName: type === 'sign-in' ? z.string().optional() : z.string().min(3, "Last name must have at least 3 characters"),
+  address1: type === 'sign-in' ? z.string().optional() : z.string().max(50, "Address must have a maximum of 50 characters"),
+  city: type === 'sign-in' ? z.string().optional() : z.string().max(50, "City must have a maximum of 50 characters"),
+  state: type === 'sign-in' ? z.string().optional() : z.string()
+    .length(2, "State must be a valid 2-letter US state abbreviation")
+    .refine(value => usStates.includes(value), {
+      message: "Invalid state abbreviation. Please enter a valid US state.",
+    }),
+  postalCode: type === 'sign-in' ? z.string().optional() : z.string()
+    .min(3, "Postal code must have at least 3 characters")
+    .max(6, "Postal code must have a maximum of 6 characters"),
+  dateOfBirth: type === 'sign-in' ? z.string().optional() : z.string().min(3, "Date of Birth must have at least 3 characters"),
+  ssn: type === 'sign-in' ? z.string().optional() : z.string().min(3, "SSN must have at least 3 characters"),
+
+  // both sign-in and sign-up
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must contain at least 8 characters"),
+});

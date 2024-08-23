@@ -29,6 +29,8 @@ const AuthForm = ({ type }: { type: string }) => {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); // State for success message
 
   const formSchema = authFormSchema(type);
 
@@ -44,11 +46,9 @@ const AuthForm = ({ type }: { type: string }) => {
     // 2. Define a submit handler.
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
       setIsLoading(true);
-
+    
       try {
-        // Sign up with Appwrite & create plaid token
-        
-        if(type === 'sign-up') {
+        if (type === 'sign-up') {
           const userData = {
             firstName: data.firstName!,
             lastName: data.lastName!,
@@ -59,28 +59,55 @@ const AuthForm = ({ type }: { type: string }) => {
             dateOfBirth: data.dateOfBirth!,
             ssn: data.ssn!,
             email: data.email,
-            password: data.password
+            password: data.password,
+          };
+    
+          try {
+            const newUser = await signUp(userData);
+            setUser(newUser);
+          } catch (error: any) {
+            if (error.message.includes('already exists')) {
+              form.setError("email", {
+                type: "manual",
+                message: "An account with this email already exists.",
+              });
+            } else {
+              form.setError("email", {
+                type: "manual",
+                message: error.message || "An error occurred during sign-up.",
+              });
+            }
           }
-
-          const newUser = await signUp(userData);
-
-          setUser(newUser);
         }
-
-        if(type === 'sign-in') {
+    
+        if (type === 'sign-in') {
           const response = await signIn({
             email: data.email,
             password: data.password,
-          })
-
-          if(response) router.push('/')
+          });
+  
+          if (response) {
+            setSuccessMessage("Login successful! Redirecting..."); // Set success message
+            setTimeout(() => {
+              router.push('/');
+            }, 1000); // Redirect after 1 second
+          } else {
+            form.setError("password", {
+              type: "manual",
+              message: "Wrong password. Please try again.",
+            });
+          }
         }
-      } catch (error) {
-        console.log(error);
+      } catch (error: any) {
+        form.setError("password", {
+          type: "manual",
+          message: error.message || "An error occurred during sign-in.",
+        });
       } finally {
         setIsLoading(false);
       }
-    }
+    };
+    
 
   return (
     <section className="auth-form">
@@ -144,15 +171,26 @@ const AuthForm = ({ type }: { type: string }) => {
               <CustomInput control={form.control} name='password' label="Password" placeholder='Enter your password' />
 
               <div className="flex flex-col gap-4">
-                <Button type="submit" disabled={isLoading} className="form-btn">
+              <Button 
+                  type="submit" 
+                  disabled={isLoading || !!successMessage} 
+                  className={`form-btn ${successMessage ? 'bg-green-500' : ''}`}
+                >
                   {isLoading ? (
                     <>
-                      <Loader2 size={20} className="animate-spin" /> &nbsp;
+                      <Loader2 size={20} className="animate-spin mr-2" /> {/* Spinner icon */}
                       Loading...
                     </>
-                  ) : type === 'sign-in' 
-                    ? 'Sign In' : 'Sign Up'}
+                  ) : successMessage ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin mr-2" /> {/* Spinner icon */}
+                      {successMessage}
+                    </>
+                  ) : (
+                    type === 'sign-in' ? 'Sign In' : 'Sign Up'
+                  )}
                 </Button>
+
               </div>
             </form>
           </Form>
